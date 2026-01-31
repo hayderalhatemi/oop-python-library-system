@@ -126,7 +126,6 @@ else [limit reached]
     Library -> main.py : "Borrowing limit reached"  
 end  
 
-### Flowchart (Main Menu Logic)
 
 ### Flowchart (Main Menu Logic)
 

@@ -1,5 +1,24 @@
 {
-  "books": [],
-  "users": [],
-  "loans": []
+    "books": [
+        {
+            "id": 1,
+            "title": "Python",
+            "author": "Hyader",
+            "available": true
+        },
+        {
+            "id": 111,
+            "title": "Crime and punishment",
+            "author": "Dostoevsky",
+            "available": true
+        }
+    ],
+    "users": [
+        {
+            "id": 222,
+            "name": "Hayder",
+            "type": "Student"
+        }
+    ],
+    "loans": []
 }
