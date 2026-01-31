@@ -1,5 +1,6 @@
+import json
 from book import Book
-from user import User
+from user import Student, Teacher
 from loan import Loan
 
 
@@ -8,53 +9,83 @@ class Library:
         self.books = []
         self.users = []
         self.loans = []
+        self.load_from_file()
 
-    def add_book(self, book: Book):
+    # ---------- Core logic ----------
+
+    def add_book(self, book):
         self.books.append(book)
+        self.save_to_file()
 
-    def add_user(self, user: User):
+    def add_user(self, user):
         self.users.append(user)
+        self.save_to_file()
 
-    def find_book(self, book_id: int):
-        for book in self.books:
-            if book.book_id == book_id:
-                return book
-        return None
-
-    def find_user(self, user_id: int):
-        for user in self.users:
-            if user.user_id == user_id:
-                return user
-        return None
-
-    def borrow_book(self, book_id: int, user_id: int):
-        book = self.find_book(book_id)
-        user = self.find_user(user_id)
+    def borrow_book(self, book_id, user_id):
+        book = next((b for b in self.books if b.id == book_id and b.available), None)
+        user = next((u for u in self.users if u.id == user_id), None)
 
         if not book or not user:
             return "Book or user not found."
 
-        user_loans = [loan for loan in self.loans if loan.user == user]
-        if len(user_loans) >= user.get_max_loans():
-            return "User has reached maximum loan limit."
+        # Polymorphism in action
+        user_loans = [l for l in self.loans if l.user.id == user.id]
+        if len(user_loans) >= user.get_max_books():
+            return f"{user.name} has reached the borrowing limit."
 
-        if book.borrow():
-            loan = Loan(book, user)
-            self.loans.append(loan)
-            return "Book borrowed successfully."
-        else:
-            return "Book is not available."
+        book.available = False
+        loan = Loan(book, user)
+        self.loans.append(loan)
+        self.save_to_file()
+        return "Book borrowed successfully."
 
-    def return_book(self, book_id: int):
-        for loan in self.loans:
-            if loan.book.book_id == book_id:
-                loan.book.return_book()
-                self.loans.remove(loan)
-                return "Book returned."
-        return "Loan not found."
+    def return_book(self, book_id):
+        loan = next((l for l in self.loans if l.book.id == book_id), None)
+        if not loan:
+            return "Loan not found."
+
+        loan.book.available = True
+        self.loans.remove(loan)
+        self.save_to_file()
+        return "Book returned successfully."
 
     def list_books(self):
-        return [str(book) for book in self.books]
+        return self.books
 
     def list_loans(self):
-        return [str(loan) for loan in self.loans]
+        return self.loans
+
+    # ---------- File handling (JSON) ----------
+
+    def save_to_file(self):
+        data = {
+            "books": [b.to_dict() for b in self.books],
+            "users": [u.to_dict() for u in self.users],
+            "loans": [l.to_dict() for l in self.loans]
+        }
+
+        with open("data.json", "w") as f:
+            json.dump(data, f, indent=4)
+
+    def load_from_file(self):
+        try:
+            with open("data.json", "r") as f:
+                data = json.load(f)
+
+            self.books = [Book.from_dict(b) for b in data.get("books", [])]
+
+            self.users = []
+            for u in data.get("users", []):
+                if u["type"] == "Student":
+                    self.users.append(Student.from_dict(u))
+                else:
+                    self.users.append(Teacher.from_dict(u))
+
+            self.loans = []
+            for l in data.get("loans", []):
+                book = next(b for b in self.books if b.id == l["book_id"])
+                user = next(u for u in self.users if u.id == l["user_id"])
+                self.loans.append(Loan(book, user))
+
+        except FileNotFoundError:
+            pass
